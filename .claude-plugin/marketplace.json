@@ -1,0 +1,15 @@
+{
+  "name": "local-subagent",
+  "description": "Hybrid subagent for local codebase exploration, information gathering and other task.",
+  "owner": {
+    "name": "Intel"
+  },
+  "plugins": [
+    {
+      "name": "local-subagent",
+      "source": "./",
+      "description": "Delegate all bug investigation to a free local Qwen contractor that returns a compact fix-contract; the main Claude loop only applies the edits. Ports cc-xeon's measured contract_merged arm.",
+      "version": "0.6.2"
+    }
+  ]
+}

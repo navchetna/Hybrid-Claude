@@ -1,14 +1,10 @@
 model_list:
-  - model_name: "*"
+  - model_name: "claude-sonnet-4-5"
     litellm_params:
-      model: anthropic/*
+      model: claude-sonnet-4-5
+      custom_llm_provider: anthropic
       api_key: 9f8YXkdAKwulsWeKRLtGF2aY5jvfz0IhqFs07F9s2V3b1qd0LAeEJQQJ99BDACHYHv6XJ3w3AAAAACOGU68s
       api_base: https://ayesh-m9o7pip4-eastus2.openai.azure.com/anthropic/
-  # - model_name: qwen-vl
-  #   litellm_params:
-  #     model: Qwen/Qwen3-VL-8B-Instruct
-  #     api_key: NA
-  #     api_base: http://host.docker.internal:8003/v1
   - model_name: qwen
     litellm_params:
       model: qwen/qwen3.6-27b

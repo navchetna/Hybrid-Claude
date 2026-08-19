@@ -2,23 +2,24 @@
 
 ## Instructions
 ### Setup LiteLLM
-1. Start the litellm configuration
+1. Go to litellm folder
     ```
-    docker run \
-    -v $(pwd)/config.yaml:/app/config.yaml \
-    -e OPENAI_API_KEY=$OPENAI_API_KEY \
-    -e ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY \
-    -e LITELLM_MASTER_KEY=$LITELLM_MASTER_KEY \
-    -e DATABASE_URL=$DATABASE_URL \
-    -p 4000:4000 \
-    docker.litellm.ai/berriai/litellm:latest \
-    --config /app/config.yaml
+    cd litellm
     ```
+2. Start the containers
     ```
-    litellm --config litellm/config.yaml --port 4000
+    docker compose up
     ```
+3. Go to `localhost:4000/ui/playground`
+4. Login with the credentials and create a virtual key
 
 ## Command 
 ```
-claude --agents "$(cat agents/contractor.json)" --append-system-prompt "$(cat system-prompt/prompt.md)" -p "Clone the vLLM and setup the cpu version, run the vllm test for cpu in temp folder within the current directory" --output-format stream-json --dangerously-skip-permissions
+export ANTHROPIC_FOUNDRY_BASE_URL=http://localhost:4000/
+export ANTHROPIC_FOUNDRY_API_KEY=sk-ieOb-E0NaZ8meQ_AZIK9Fw
+export ANTHROPIC_DEFAULT_SONNET_MODEL=claude-sonnet-4-5
+export ANTHROPIC_DEFAULT_OPUS_MODEL=claude-sonnet-4-5
+export CLAUDE_CODE_USE_FOUNDRY=1
+```
+claude --agents "$(cat agents/contractor.json)" --append-system-prompt "$(cat system-prompt/prompt.md)" -p "Clone the vLLM and setup the cpu version, run the vllm test for cpu in temp folder within the current directory" --output-format stream-json --dangerously-skip-permissions --verbose
 ```

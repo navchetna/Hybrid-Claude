@@ -1,0 +1,17 @@
+{
+  "name": "local-subagent",
+  "version": "0.6.2",
+  "description": "Delegate all bug investigation to a free local Qwen contractor that returns a compact fix-contract; the main Claude loop only applies the edits. Ports cc-xeon's measured contract_merged arm.",
+  "author": {
+    "name": "Intel"
+  },
+  "repository": "https://github.com/navchetna/Hybrid-Claude.git",
+  "license": "MIT",
+  "keywords": [
+    "subagent",
+    "qwen",
+    "cost",
+    "delegation",
+    "swe-bench"
+  ]
+}
