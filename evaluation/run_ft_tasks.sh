@@ -24,6 +24,7 @@ TRACE_DIR="${CCX_TRACE_DIR:-$OUT/traces}"
 CALLS_LOG="$TRACE_DIR/calls.jsonl"
 RUNS_LOG="$OUT/runs.jsonl"
 EMIT="${EMIT_TRACES:-auto}"        # auto = emit if the proxy captured calls; off = never
+PROXY_BASE_URL="${ANTHROPIC_BASE_URL:-${ANTHROPIC_FOUNDRY_BASE_URL:-}}"
 
 die() { printf 'run_ft_tasks: ERROR: %s\n' "$*" >&2; exit 1; }
 
@@ -32,9 +33,9 @@ command -v claude >/dev/null || die "claude CLI not on PATH."
 command -v git >/dev/null || die "git not on PATH."
 command -v jq   >/dev/null || die "jq not on PATH."
 [ -f "$TASKS" ] || die "task list not found: $TASKS"
-[ -n "${ANTHROPIC_BASE_URL:-}" ] || die "ANTHROPIC_BASE_URL not set — run /xeon-subagent:setup, then export it (see PREREQUISITES)."
-curl -sf "$ANTHROPIC_BASE_URL/health/liveliness" -m 5 >/dev/null 2>&1 \
-  || die "proxy at ANTHROPIC_BASE_URL=$ANTHROPIC_BASE_URL is not answering — is LiteLLM up?"
+[ -n "$PROXY_BASE_URL" ] || die "ANTHROPIC_BASE_URL or ANTHROPIC_FOUNDRY_BASE_URL not set — run /xeon-subagent:setup, then export one of them (see PREREQUISITES)."
+curl -sf "$PROXY_BASE_URL/health/liveliness" -m 5 >/dev/null 2>&1 \
+  || die "proxy at ANTHROPIC_BASE_URL=$PROXY_BASE_URL is not answering — is LiteLLM up?"
 claude plugin list 2>/dev/null | grep -qi 'xeon-subagent' \
   || echo "run_ft_tasks: WARN: 'xeon-subagent' not shown by 'claude plugin list' — ensure it is installed & enabled." >&2
 
@@ -64,7 +65,7 @@ for IID in "${IDS[@]}"; do
   [ -n "$n" ] || continue
   PLANNED=$(( PLANNED + ${REPEATS:-$n} ))
 done
-echo "run_ft_tasks: ${#IDS[@]} task(s), ${PLANNED} planned run(s); model=$MODEL; timeout=${TASK_TIMEOUT}s; proxy=$ANTHROPIC_BASE_URL"
+echo "run_ft_tasks: ${#IDS[@]} task(s), ${PLANNED} planned run(s); model=$MODEL; timeout=${TASK_TIMEOUT}s; proxy=$PROXY_BASE_URL"
 
 # ── per-task, per-run ─────────────────────────────────────────────────────────────
 for IID in "${IDS[@]}"; do
@@ -109,10 +110,11 @@ for IID in "${IDS[@]}"; do
     T0="$(date +%s.%N)"
     ( cd "$CLONE" && \
       env -u CLAUDE_CODE_USE_BEDROCK -u ANTHROPIC_API_KEY \
-          ANTHROPIC_BASE_URL="$ANTHROPIC_BASE_URL" \
+          ANTHROPIC_BASE_URL="$PROXY_BASE_URL" \
+          ANTHROPIC_FOUNDRY_BASE_URL="$PROXY_BASE_URL" \
           ANTHROPIC_AUTH_TOKEN="${ANTHROPIC_AUTH_TOKEN:-}" \
           timeout "$TASK_TIMEOUT" \
-          claude -p "/xeon-subagent:contract $(cat "$PROMPT_FILE")" \
+          claude -p "/local-subagent:contract $(cat "$PROMPT_FILE")" \
             --permission-mode acceptEdits \
             --allowedTools "Task,Read,Edit,Write,Bash,Grep,Glob" \
             --model "$MODEL" \

@@ -13,6 +13,12 @@
 3. Go to `localhost:4000/ui/playground`
 4. Login with the credentials and create a virtual key
 
+### Installing Claude Plugin
+1. Install the plugin
+```claude --plugin-dir .```
+
+2. To run any task
+
 ## Command 
 ```
 export ANTHROPIC_FOUNDRY_BASE_URL=http://localhost:4000/

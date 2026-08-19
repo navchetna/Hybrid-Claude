@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""SessionStart hook — one-time setup nudge for the xeon-subagent plugin.
+"""SessionStart hook — one-time setup nudge for the local-subagent plugin.
 
 Makes setup "ask once": if the plugin has not been configured (no config marker
-written by /xeon-subagent:setup), emit additionalContext asking Claude to offer
+written by /local-subagent:setup), emit additionalContext asking Claude to offer
 to run setup. Once the marker exists, stay completely silent.
 
 Hooks cannot run interactive prompts, so we inject context rather than asking
-directly; the model then offers /xeon-subagent:setup to the user. Silent and
+directly; the model then offers /local-subagent:setup to the user. Silent and
 best-effort: any error exits 0 with no output so a session never breaks.
 """
 import os
@@ -19,7 +19,7 @@ def data_dir() -> str:
     d = os.environ.get("CLAUDE_PLUGIN_DATA")
     if d:
         return d
-    return os.path.join(tempfile.gettempdir(), "xeon-subagent")
+    return os.path.join(tempfile.gettempdir(), "local-subagent")
 
 
 def main() -> None:
@@ -42,9 +42,9 @@ def main() -> None:
         sys.exit(0)  # already set up — say nothing
 
     msg = (
-        "The `xeon-subagent` plugin is installed but not yet configured. It routes a "
+        "The `local-subagent` plugin is installed but not yet configured. It routes a "
         "free local Qwen `contractor` subagent through a LiteLLM proxy. Before the user "
-        "runs `/xeon-subagent:contract`, offer to run `/xeon-subagent:setup` once to set "
+        "runs `/local-subagent:contract`, offer to run `/local-subagent:setup` once to set "
         "the LiteLLM base URL (`ANTHROPIC_BASE_URL`). Mention this only if the user's "
         "request involves fixing a bug or using this plugin; otherwise stay quiet."
     )
