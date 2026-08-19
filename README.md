@@ -1,5 +1,22 @@
 # Hybrid AI
 
+## Instructions
+### Setup LiteLLM
+1. Start the litellm configuration
+    ```
+    docker run \
+    -v $(pwd)/config.yaml:/app/config.yaml \
+    -e OPENAI_API_KEY=$OPENAI_API_KEY \
+    -e ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY \
+    -e LITELLM_MASTER_KEY=$LITELLM_MASTER_KEY \
+    -e DATABASE_URL=$DATABASE_URL \
+    -p 4000:4000 \
+    docker.litellm.ai/berriai/litellm:latest \
+    --config /app/config.yaml
+    ```
+    ```
+    litellm --config litellm/config.yaml --port 4000
+    ```
 
 ## Command 
 ```
