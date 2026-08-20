@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # run_ft_tasks.sh — run the 20 fine-tune SWE-bench tasks (50 sessions) through the
-# xeon-subagent plugin: Opus fixes each bug, the local Qwen contractor investigates.
+# local-subagent plugin: Opus fixes each bug, the local Qwen contractor investigates.
 # See README.md for setup + FAQ. Quick start:
-#   export ANTHROPIC_BASE_URL=... ANTHROPIC_AUTH_TOKEN=...   # from /xeon-subagent:setup
+#   export ANTHROPIC_BASE_URL=... ANTHROPIC_AUTH_TOKEN=...   # from /local-subagent:setup
 #   ./run_ft_tasks.sh                       # all 20 tasks = 50 runs
 #   ./run_ft_tasks.sh django__django-11087  # one task     REPEATS=1 = 1 run/task
 # Output: out/<task>__rN.patch, out/<task>__rN.log, out/summary.tsv
@@ -12,32 +12,60 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TASKS="$HERE/ft_tasks.jsonl"
 WORK="${WORK:-$HERE/work}"          # repo checkouts live here (cached, reused)
 OUT="${OUT:-$HERE/out}"             # per-run patch + log + summary
-MODEL="${MODEL:-us.anthropic.claude-opus-4-8}"     # main-loop (orchestrator) model
+MODEL="${MODEL:-${ANTHROPIC_DEFAULT_SONNET_MODEL:-us.anthropic.claude-opus-4-8}}"     # main-loop (orchestrator) model
 TASK_TIMEOUT="${TASK_TIMEOUT:-1800}"               # seconds per run
 REPEATS="${REPEATS:-}"              # force N runs/task; default = the task's "runs" field
 VARIANT="${VARIANT:-contract}"     # run.variant label written into the emitted traces
 # Finetune-trace capture. When the proxy was started with CCX_TRACE_DIR (see
-# /xeon-subagent:setup + README "Produce fine-tune-format traces"), it appends every
+# /local-subagent:setup + README "Produce fine-tune-format traces"), it appends every
 # model call to $CCX_TRACE_DIR/calls.jsonl. The driver records one run-window line per
 # run (out/runs.jsonl) so emit_traces.py can attribute each call to a (task,repeat).
 TRACE_DIR="${CCX_TRACE_DIR:-$OUT/traces}"
 CALLS_LOG="$TRACE_DIR/calls.jsonl"
 RUNS_LOG="$OUT/runs.jsonl"
 EMIT="${EMIT_TRACES:-auto}"        # auto = emit if the proxy captured calls; off = never
+# Accept either environment-variable naming convention automatically.
 PROXY_BASE_URL="${ANTHROPIC_BASE_URL:-${ANTHROPIC_FOUNDRY_BASE_URL:-}}"
+PROXY_API_KEY="${ANTHROPIC_AUTH_TOKEN:-${ANTHROPIC_FOUNDRY_API_KEY:-}}"
 
 die() { printf 'run_ft_tasks: ERROR: %s\n' "$*" >&2; exit 1; }
+
+# The plugin lives one directory above this script; resolve it relative to the
+# evaluation folder so the user can run this script from anywhere in the repo.
+PLUGIN_ROOT="$(cd "$HERE/.." && pwd)"
+
+register_local_plugin() {
+  echo "run_ft_tasks: registering local plugin from $PLUGIN_ROOT"
+  if ! claude plugin marketplace add "$PLUGIN_ROOT" >/tmp/local_subagent_marketplace_add.log 2>&1; then
+    # Ignore duplicate/previously-registered entries; the install step is the
+    # important part for idempotent reruns.
+    if ! claude plugin marketplace list 2>/dev/null | grep -Fq "$PLUGIN_ROOT"; then
+      cat /tmp/local_subagent_marketplace_add.log >&2 || true
+      die "failed to register local plugin at $PLUGIN_ROOT"
+    fi
+  fi
+
+  echo "run_ft_tasks: installing local-subagent plugin"
+  if ! claude plugin install local-subagent >/tmp/local_subagent_install.log 2>&1; then
+    if ! claude plugin list 2>/dev/null | grep -qi 'local-subagent'; then
+      cat /tmp/local_subagent_install.log >&2 || true
+      die "failed to install local-subagent plugin"
+    fi
+  fi
+}
 
 # ── preflight ─────────────────────────────────────────────────────────────────
 command -v claude >/dev/null || die "claude CLI not on PATH."
 command -v git >/dev/null || die "git not on PATH."
 command -v jq   >/dev/null || die "jq not on PATH."
+register_local_plugin
 [ -f "$TASKS" ] || die "task list not found: $TASKS"
-[ -n "$PROXY_BASE_URL" ] || die "ANTHROPIC_BASE_URL or ANTHROPIC_FOUNDRY_BASE_URL not set — run /xeon-subagent:setup, then export one of them (see PREREQUISITES)."
+[ -n "$PROXY_BASE_URL" ] || die "ANTHROPIC_BASE_URL or ANTHROPIC_FOUNDRY_BASE_URL not set — run /local-subagent:setup, then export one of them (see PREREQUISITES)."
+[ -n "$PROXY_API_KEY" ] || die "ANTHROPIC_AUTH_TOKEN or ANTHROPIC_FOUNDRY_API_KEY not set — export one of them before running tasks."
 curl -sf "$PROXY_BASE_URL/health/liveliness" -m 5 >/dev/null 2>&1 \
   || die "proxy at ANTHROPIC_BASE_URL=$PROXY_BASE_URL is not answering — is LiteLLM up?"
-claude plugin list 2>/dev/null | grep -qi 'xeon-subagent' \
-  || echo "run_ft_tasks: WARN: 'xeon-subagent' not shown by 'claude plugin list' — ensure it is installed & enabled." >&2
+claude plugin list 2>/dev/null | grep -qi 'local-subagent' \
+  || echo "run_ft_tasks: WARN: 'local-subagent' not shown by 'claude plugin list' — ensure it is installed & enabled." >&2
 
 mkdir -p "$WORK" "$OUT"
 : > "$OUT/summary.tsv"
@@ -109,10 +137,12 @@ for IID in "${IDS[@]}"; do
     # model call to THIS (task, repeat). Runs are strictly sequential -> windows don't overlap.
     T0="$(date +%s.%N)"
     ( cd "$CLONE" && \
-      env -u CLAUDE_CODE_USE_BEDROCK -u ANTHROPIC_API_KEY \
+      env -u CLAUDE_CODE_USE_BEDROCK \
           ANTHROPIC_BASE_URL="$PROXY_BASE_URL" \
           ANTHROPIC_FOUNDRY_BASE_URL="$PROXY_BASE_URL" \
-          ANTHROPIC_AUTH_TOKEN="${ANTHROPIC_AUTH_TOKEN:-}" \
+          ANTHROPIC_AUTH_TOKEN="$PROXY_API_KEY" \
+          ANTHROPIC_FOUNDRY_API_KEY="$PROXY_API_KEY" \
+          ANTHROPIC_API_KEY="$PROXY_API_KEY" \
           timeout "$TASK_TIMEOUT" \
           claude -p "/local-subagent:contract $(cat "$PROMPT_FILE")" \
             --permission-mode acceptEdits \

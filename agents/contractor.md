@@ -1,7 +1,7 @@
 ---
 name: contractor
 description: "Investigates the codebase as much as needed and returns a COMPACT fix-contract as a path:line citation map: per edit site, a repo-relative path with a start-end line range and a one-line concrete change, plus a one-line root cause and the test command. Use it for ALL reading, searching, and root-cause work; it returns only what the orchestrator needs to apply the edit without re-reading."
-model: qwen
+model: Qwen/Qwen3-30B-A3B-Instruct-2507
 tools: Read, Grep, Glob, Bash
 maxTurns: 40
 ---

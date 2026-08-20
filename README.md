@@ -21,11 +21,26 @@
 
 ## Command 
 ```
-export ANTHROPIC_FOUNDRY_BASE_URL=http://localhost:4000/
-export ANTHROPIC_FOUNDRY_API_KEY=sk-ieOb-E0NaZ8meQ_AZIK9Fw
+export ANTHROPIC_FOUNDRY_BASE_URL=https://ei-api.mg2.eglb.intel.com
+export ANTHROPIC_FOUNDRY_API_KEY=sk-xZ68PyuImspqA0TFl6flJw
 export ANTHROPIC_DEFAULT_SONNET_MODEL=claude-sonnet-4-5
 export ANTHROPIC_DEFAULT_OPUS_MODEL=claude-sonnet-4-5
 export CLAUDE_CODE_USE_FOUNDRY=1
 ```
-claude --agents "$(cat agents/contractor.json)" --append-system-prompt "$(cat system-prompt/prompt.md)" -p "Clone the vLLM and setup the cpu version, run the vllm test for cpu in temp folder within the current directory" --output-format stream-json --dangerously-skip-permissions --verbose
+
+## Install Claude Plugin
+1. Register the plugin in local marketplace
 ```
+claude plugin marketplace add ./
+```
+2. Install the plugin
+```
+claude plugin install local-subagent
+```
+
+## Run the plugin routing
+1. Interactive Mode
+    - Run the claude code
+
+2. Headless mode
+    - claude -p "/local-subagent:contract  is there a bug in the codebase?"
